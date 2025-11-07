@@ -103,10 +103,10 @@ $BaseFileName = "GPReport_$($runTime)_$($TargetUser -replace '[\\ ]','_').html"
 
 $LocalReportFile = Join-Path -Path $ReportPath -ChildPath $BaseFileName
 
-# Ensure the local destination folder exists
+# Ensure the local destination folder exists - create by force if not.
 if (-not (Test-Path $ReportPath)) {
     Write-Host "Creating local destination path: $ReportPath"
-    New-Item -Path $ReportPath -ItemType Directory | Out-Null
+    New-Item -Path $ReportPath -ItemType Directory -Force | Out-Null
 }
 
 Write-Host "Checking connectivity to $Computer..."
