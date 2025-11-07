@@ -18,12 +18,12 @@ This user does NOT need to be currently logged in.
 The local directory where the generated HTML report file will be saved. Defaults to C:\admintools\reports.
 
 .EXAMPLE
-.\Get-RemoteGPReport.ps1 -Computer "POS-01" -TargetUser "ILHMEC\jeff sherry"
+.\Get-RemoteGPReport.ps1 -Computer "laptop-01" -TargetUser "domain\user"
 
 .EXAMPLE
 .\Get-RemoteGPReport.ps1
 
-    # Script will prompt for Computer, TargetUser, and AdminUser interactively.
+    # Script will prompt for Computer and TargetUser interactively.
 
 .NOTES
 Requires the 'GroupPolicy' PowerShell module (part of RSAT/GPMC) to be installed on the machine running the script.
@@ -103,7 +103,7 @@ $BaseFileName = "GPReport_$($runTime)_$($TargetUser -replace '[\\ ]','_').html"
 
 $LocalReportFile = Join-Path -Path $ReportPath -ChildPath $BaseFileName
 
-# Ensure the local destination folder exists (FIXED: Correct variable used)
+# Ensure the local destination folder exists
 if (-not (Test-Path $ReportPath)) {
     Write-Host "Creating local destination path: $ReportPath"
     New-Item -Path $ReportPath -ItemType Directory | Out-Null
