@@ -9,7 +9,10 @@
   The path where the project directory will be created. Default is the current directory.
 
   .PARAMETER ProjectType
-  The type of Google Apps Script project to create. Options are 'standalone', 'docs
+  The type of Google Apps Script project to create. Options are 'standalone', 'docs', 'sheets', 'forms', 'slides'. Default is 'standalone'.
+
+  .PARAMETER ReadmeTemplatePath
+  Path to a README template file. Default is './README_Template.md'. If the file does not exist, a default basic README will be created.
 
   .EXAMPLE
   New-GappsProject.ps1 -ProjectName "MyGappsProject" -DestinationPath "C:\Projects"
@@ -21,6 +24,7 @@ param (
     [Parameter(Mandatory=$true)]
     [string]$ProjectName,
     [string]$DestinationPath = ".",
+    [string]$ReadmeTemplatePath = "./README_Template.md",
     [ValidateSet("standalone", "docs", "sheets", "forms", "slides")]
     [string]$ProjectType = "standalone"  # Options: standalone, docs, sheets, forms, slides
 )
@@ -125,26 +129,19 @@ Thumbs.db
     Write-Warning "Git initialization failed. Ensure Git is installed and in your PATH."
 }
 
-# --- Step 5: Create a README file ---
+# Generate a README
+# Check if template exists
+if (Test-Path -Path $ReadmeTemplatePath) {
+    Write-Information "Generating README using template $ReadmeTemplatePath"
+    $ReadmeContent = Get-Content -Path $ReadmeTemplatePath -Raw
+    $ReadmeContent = $ReadmeContent -replace "\{\{ProjectName\}\}", $ProjectName
+    $ReadmeContent = $ReadmeContent -replace "\{\{ProjectType\}\}", $ProjectType
+} else {
+    Write-Information "README template not found at $ReadmeTemplatePath. Creating default README."
+    $ReadmeContent = "# $ProjectName`nGoogle Apps Script Project"
+}
+
 $ReadmePath = Join-Path -Path $ProjectPath -ChildPath "README.md"
-$ReadmeContent = "@
-# $ProjectName
-
-This is the $ProjectName project.
-
-## Project Structure
-
-* ``src/``: Google Apps Script source files (where ``clasp`` pushes code from).
-* ``docs/``: Project documentation.
-* ``tests/``: Unit and integration test files.
-* ``configs/``: Configuration files (e.g., specific build or linter settings).
-
-## Development Setup
-
-1.  Navigate to the project directory: ``cd $DirName``
-2.  Start developing in the ``src`` directory.
-3.  Use ``clasp push`` to upload changes to Google.
-@"
 
 Set-Content -Path $ReadmePath -Value $ReadmeContent
 Write-Information "README.md created."
