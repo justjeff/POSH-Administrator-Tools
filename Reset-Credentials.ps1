@@ -44,23 +44,28 @@ function Test-SecLogonService {
 # Reset user credentials by prompting for new password
 function Reset-Credentials {
   # Get the currently logged-in username to pre-fill the box (Optional but safer)
-  $LoggedInUser = (Get-CimInstance Win32_ComputerSystem).UserName
-  if (-not $LoggedInUser) { return $false }
+  $LoggedInUser = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).UserName ??
+  '$env:USERDOMAIN\$env:USERNAME'
+#   if (-not $LoggedInUser) { return $false }
 
   # Prompt for credentials
   # This MUST be run in the user's active session to see the popup
-  $Cred = Get-Credential -UserName $LoggedInUser -Message "IT ACTION REQUIRED: Enter your NEW Domain/OneLogin password to sync your laptop."
-
   try {
-    # Trigger the cache update.
-    # Using powershell.exe -Command exit is cleaner than opening/closing Notepad.
-    Start-Process "cmd.exe" -ArgumentList "/c exit" -Credential $Cred -LoadUserProfile -WindowStyle Hidden
+    $Cred = Get-Credential `
+    -UserName $LoggedInUser `
+    -Message "IT ACTION REQUIRED: Enter your NEW Domain/OneLogin password to sync your laptop."
 
-    return $true
-    #Write-Host "Successfully triggered credential sync for $($Cred.UserName)"
+    if (-not $Cred) { return $false }
+
+    # Trigger the cache update.
+    Start-Process "cmd.exe" `
+    -ArgumentList "/c exit" `
+    -Credential $Cred `
+    -LoadUserProfile `
+    -WindowStyle Hidden
+
   } catch {
     return $false
-    #Write-Error "Failed to sync. Ensure you are connected to VPN as an admin first."
   }
 }
 
