@@ -44,9 +44,8 @@ function Test-SecLogonService {
 # Reset user credentials by prompting for new password
 function Reset-Credentials {
   # Get the currently logged-in username to pre-fill the box (Optional but safer)
-  $LoggedInUser = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).UserName ??
-  '$env:USERDOMAIN\$env:USERNAME'
-#   if (-not $LoggedInUser) { return $false }
+  $LoggedInUser = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).UserName
+  if (-not $LoggedInUser) { $LoggedInUser = "$env:USERDOMAIN\$env:USERNAME" }
 
   # Prompt for credentials
   # This MUST be run in the user's active session to see the popup
