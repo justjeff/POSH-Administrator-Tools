@@ -113,20 +113,6 @@ $TimeoutSeconds = 120 # 2 minute timeout
 $StartTime = Get-Date
 $Connected = $false
 
-$VpnStatusForm = New-Object System.Windows.Forms.Form
-$VpnStatusForm.Text = "VPN Status"
-$VpnStatusForm.Size = New-Object System.Drawing.Size(300, 150)
-$VpnStatusForm.StartPosition = "CenterScreen"
-
-$Label = New-Object System.Windows.Forms.Label
-$Label.Text = "Waiting for VPN connection..."
-$Label.Location = New-Object System.Drawing.Point(10, 20)
-$Label.Font = New-Object System.Drawing.Font("Segoe UI",12,[System.Drawing.FontStyle]::Bold)
-$Label.Autosize = $true
-$VpnStatusForm.Controls.Add($Label)
-
-$VpnStatusForm.Show()
-
 # Loop until connected or timeout
 while (((Get-Date) - $StartTime).TotalSeconds -lt $TimeoutSeconds) {
     if (Test-VpnActive) {
@@ -134,22 +120,12 @@ while (((Get-Date) - $StartTime).TotalSeconds -lt $TimeoutSeconds) {
         break
     }
 
-    # Update UI Label instead of Console
-    $Remaining = [math]::Round($TimeoutSeconds - ((Get-Date) - $StartTime).TotalSeconds)
-    $StatusLabel.Text = "Waiting for VPN... ($($Remaining)s remaining)"
-
-    # Refresh form to prevent "Not Responding" and update visuals
-    [System.Windows.Forms.Application]::DoEvents()
-
-    Start-Sleep -Seconds 1
-
-    # # Visual feedback so the user knows the script is alive
-    # Write-Host "Waiting for VPN... ($([math]::Round(($TimeoutSeconds - ((Get-Date) - $StartTime).TotalSeconds)))s remaining)  " -NoNewline
-    # Start-Sleep -Seconds 2
-    # # Overwrite the line instead of spamming new lines
-    # Write-Host "`r" -NoNewline
+    # Visual feedback so the user knows the script is alive
+    Write-Host "Waiting for VPN... ($([math]::Round(($TimeoutSeconds - ((Get-Date) - $StartTime).TotalSeconds)))s remaining)  " -NoNewline
+    Start-Sleep -Seconds 2
+    # Overwrite the line instead of spamming new lines
+    Write-Host "`r" -NoNewline
 }
-$VpnStatusForm.Close()
 
 if ($Connected) {
     [System.Windows.Forms.MessageBox]::Show(
