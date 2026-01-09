@@ -128,9 +128,13 @@ while (((Get-Date) - $StartTime).TotalSeconds -lt $TimeoutSeconds) {
 }
 
 if ($Connected) {
-    Write-Host "`n[SUCCESS] Connection detected! You are now on the CPM network." -ForegroundColor Green
-    Write-Host "`n=== Details ===`n"
-    klist
+    [System.Windows.Forms.MessageBox]::Show(
+        "VPN connection detected.`n`nYou will now be prompted to enter your NEW password to synchronize your credentials.",
+        "VPN Connected",
+        'OK',
+        'Information'
+    )
+
     Start-Sleep -Seconds 2
     if (-not (Reset-Credentials)) {
         [System.Windows.Forms.MessageBox]::Show(
