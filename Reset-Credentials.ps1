@@ -1,6 +1,11 @@
+# .SYNOPSIS
+#   Reset cached user credentials by prompting for new password when connected to VPN.
+# .DESCRIPTION
+#   Connects to VPN, prompts user for new password, and triggers credential cache update.
+#   Requires Secondary Logon service to be running.
+
 Add-Type -AssemblyName System.Windows.Forms
 
-# Check if VPN is reachable
 function Test-VpnActive {
     # 1. Check for ANY non-physical adapter that is Up
     $vpnInterface = Get-NetAdapter |
@@ -29,7 +34,7 @@ function Test-VpnActive {
         return $false
     }
 }
-# Ensure Secondary Logon service is active (required for RunAs/Credential Sync)
+
 function Test-SecLogonService {
   try {
     $Service = Get-Service seclogon -ErrorAction Stop
@@ -41,30 +46,47 @@ function Test-SecLogonService {
     return $false
   }
 }
-# Reset user credentials by prompting for new password
+
 function Reset-Credentials {
-  # Get the currently logged-in username to pre-fill the box (Optional but safer)
-  $LoggedInUser = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).UserName
+  # Get the currently logged-in username to pre-fill the box
+  $LoggedInUser = (Get-CimInstance Win32_ComputerSystem).UserName
   if (-not $LoggedInUser) { $LoggedInUser = "$env:USERDOMAIN\$env:USERNAME" }
 
-  # Prompt for credentials
-  # This MUST be run in the user's active session to see the popup
   try {
-    $Cred = Get-Credential `
-    -UserName $LoggedInUser `
-    -Message "IT ACTION REQUIRED: Enter your NEW Domain/OneLogin password to sync your laptop."
-
-    if (-not $Cred) { return $false }
+    # Prompt for credentials
+    # This MUST be run in the user's active session to see the popup
+    $Cred = Get-Credential -UserName $LoggedInUser -Message "ACTION REQUIRED: Enter your NEW Domain/OneLogin password to sync your laptop."
 
     # Trigger the cache update.
-    Start-Process "cmd.exe" `
-    -ArgumentList "/c exit" `
-    -Credential $Cred `
-    -LoadUserProfile `
-    -WindowStyle Hidden
+    # This is clener than launching notepad.exe or similar.
+    $proc = Start-Process "cmd.exe" `
+                -ArgumentList "/c exit" `
+                -Credential $Cred `
+                -LoadUserProfile `
+                -WindowStyle Hidden `
+                -PassThru -Wait
 
+    return ($proc.ExitCode -eq 0) # Success if exit code is 0
   } catch {
     return $false
+  }
+}
+
+function Lock-Workstation {
+  # This calls the native Windows function to lock the screen
+  $lockPath = "$env:windir\System32\rundll32.exe"
+  try {
+    if (-not (Test-Path $lockPath)) {
+    throw "Lock executable not found at $lockPath"
+    }
+  } catch {
+    throw "Failed to locate lock executable: $_"
+  }
+
+  try {
+    Start-Process $lockPath -ArgumentList "user32.dll,LockWorkStation"
+  } catch {
+    throw "Failed to lock workstation: $_"
   }
 }
 
@@ -101,12 +123,14 @@ while (((Get-Date) - $StartTime).TotalSeconds -lt $TimeoutSeconds) {
     # Visual feedback so the user knows the script is alive
     Write-Host "Waiting for VPN... ($([math]::Round(($TimeoutSeconds - ((Get-Date) - $StartTime).TotalSeconds)))s remaining)  " -NoNewline
     Start-Sleep -Seconds 2
-    # Clear the line (backspace trick)
+    # Overwrite the line instead of spamming new lines
     Write-Host "`r" -NoNewline
 }
 
 if ($Connected) {
     Write-Host "`n[SUCCESS] Connection detected! You are now on the CPM network." -ForegroundColor Green
+    Write-Host "`n=== Details ===`n"
+    klist
     Start-Sleep -Seconds 2
     if (-not (Reset-Credentials)) {
         [System.Windows.Forms.MessageBox]::Show(
@@ -116,12 +140,16 @@ if ($Connected) {
             'Error'
         )
     } else {
-        [System.Windows.Forms.MessageBox]::Show(
-            "Your credentials have been successfully updated.",
-            "Credential Sync Successful",
-            'OK',
-            'Information'
+        $choice = [System.Windows.Forms.MessageBox]::Show(
+            "Your credentials have been successfully synchronized. `n`nLock your workstation now to finish the process?",
+            "Credential Sync Successful - Lock Workstation",
+            'YesNo',
+            'Question'
         )
+        if ($choice -eq 'Yes') {
+            # Call Lock-Workstation action
+            Lock-Workstation
+        }
     }
 } else {
     [System.Windows.Forms.MessageBox]::Show(
